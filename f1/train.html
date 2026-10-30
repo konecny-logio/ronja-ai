@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trénink neuronové sítě</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/train.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="story" class="panel"></div>
+<div id="toast" class="hidden"></div>
+
+<div id="tside">
+  <div class="panel head">
+    <div class="title-row"><h2>Trénink neuronové sítě</h2><a href="index.html">← do hry</a></div>
+    <div class="stats">
+      <div><span>Generace</span><b id="st-gen">0</b></div>
+      <div><span>Trať</span><b id="st-track"></b></div>
+      <div><span>Ještě jede</span><b id="st-alive"></b></div>
+      <div><span>Čas</span><b id="st-time"></b></div>
+    </div>
+    <div class="btns">
+      <button id="b-play">▶ Spustit trénink</button>
+      <span class="speed" id="speeds">
+        <button data-speed="1">1×</button><button data-speed="3">3×</button><button data-speed="10">10×</button><button data-speed="0">max</button>
+      </span>
+    </div>
+  </div>
+
+  <details class="panel" id="settings">
+    <summary>Nastavení tréninku</summary>
+    <div class="grid">
+      <div>Tratě, na kterých se trénuje:
+        <div id="set-tracks"></div>
+      </div>
+      <label class="check overtake"><input id="set-traffic" type="checkbox">
+        <span><b>Předjíždění</b> – na trati jezdí pomalá auta a mozky dostanou 3 nové vstupy: jak daleko je auto
+        vpředu, na které straně je a jak rychle se k němu blížím. Srážka s pomalým autem = havárie.</span></label>
+      <label>Počet aut v generaci: <b id="set-pop-v"></b><input id="set-pop" type="range" min="10" max="100" step="10"></label>
+      <label>Skrytých neuronů: <b id="set-hid-v"></b><input id="set-hid" type="range" min="2" max="12"></label>
+      <label>Síla mutace: <b id="set-mut-v"></b><input id="set-mut" type="range" min="0.1" max="1.5" step="0.1"></label>
+      <button id="b-reset">⟲ Začít znovu s náhodnými mozky</button>
+    </div>
+  </details>
+
+  <div class="panel">
+    <div class="ptitle">Mozek auta <b id="net-who"></b></div>
+    <div class="btns follow">
+      <button id="f-leader" class="on">Vedoucí</button>
+      <button id="f-next">Další auto (Tab)</button>
+      <button id="f-traffic">U pomalého auta</button>
+    </div>
+    <div class="hint">…nebo klikni na auto na trati.</div>
+    <canvas id="net" width="380" height="250"></canvas>
+    <div class="legend"><span><i class="w pos"></i>kladná váha</span><span><i class="w neg"></i>záporná váha</span><span>tloušťka = síla</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">Skóre generací <span class="hint">(ujetá kola, součet přes tratě)</span></div>
+    <canvas id="chart" width="380" height="170"></canvas>
+    <div class="legend"><span><i class="l best"></i>nejlepší auto</span><span><i class="l avg"></i>průměr generace</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="btns wrap">
+      <button id="b-champ">🏆 Předvést šampiona</button>
+      <select id="champ-track" title="Trať pro předvedení"></select>
+      <select id="champ-mode" title="Proti komu šampion jede">
+        <option value="bots">proti botům</option>
+        <option value="traffic">v pomalém provozu</option>
+      </select>
+      <button id="b-use" class="secondary">Použít ve hře</button>
+      <button id="b-pre" class="secondary">Načíst předtrénovanou</button>
+      <button id="b-save" class="secondary">Stáhnout síť</button>
+      <button id="b-load" class="secondary">Nahrát síť</button>
+      <input id="f-load" type="file" accept=".json" class="hidden">
+    </div>
+  </div>
+
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/neural.js"></script>
+<script src="js/pretrained.js"></script>
+<script src="js/pretrained-overtake.js"></script>
+<script src="js/render.js"></script>
+<script src="js/train-ui.js"></script>
+</body>
+</html>

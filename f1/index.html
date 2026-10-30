@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F1 Závody</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- HUD během závodu -->
+<div id="hud" class="hidden">
+  <div id="sidebar">
+  <div id="players"></div>
+  <div id="standings" class="panel"></div>
+  <div id="inspector" class="panel">
+    <div class="insp-title">Co vidí auto <b id="insp-name"></b> <span class="hint">(Tab = další auto)</span></div>
+    <div id="insp-bars"></div>
+    <div class="insp-row"><span>Rychlost</span><b id="insp-speed"></b></div>
+    <div class="insp-row"><span>Směr vůči trati</span><b id="insp-angle"></b></div>
+    <div class="insp-row"><span>Na asfaltu</span><b id="insp-road"></b></div>
+    <div class="insp-inputs">Vstupy pro neuronovou síť:<br><code id="insp-inputs"></code></div>
+    <div class="insp-inputs">Výstupy řidiče:<br><code id="insp-outputs"></code></div>
+  </div>
+  </div>
+  <div id="help">Mezerník = pauza · R = paprsky všech aut · Tab = další auto · Esc = menu</div>
+  <div id="lights"><i></i><i></i><i></i><i></i><i></i></div>
+  <div id="banner" class="hidden"></div>
+</div>
+
+<!-- Menu -->
+<div id="menu" class="overlay">
+  <div class="card">
+    <h1>F1 Závody</h1>
+    <p class="sub">Pohled shora, opravdová setrvačnost. Když vjedeš do zatáčky moc rychle, vynese tě to ven.</p>
+    <div class="grid">
+      <label>Hráči
+        <select id="opt-players">
+          <option value="0">0 – jen se dívám na boty</option>
+          <option value="1" selected>1 hráč</option>
+          <option value="2">2 hráči</option>
+        </select>
+      </label>
+      <label>Počítačoví soupeři (NPC): <b id="opt-npc-val">5</b>
+        <input id="opt-npc" type="range" min="0" max="8" value="5">
+      </label>
+      <label>Kdo řídí soupeře
+        <select id="opt-npc-type">
+          <option value="rules">Boti naprogramovaní pravidly</option>
+          <option value="nn">Neuronová síť (naučená sama)</option>
+          <option value="mix">Napůl boti, napůl síť</option>
+        </select>
+      </label>
+      <label>Která neuronová síť
+        <select id="opt-brain">
+          <option value="saved">Z mého tréninku</option>
+          <option value="pre">Předtrénovaná – nevidí jiná auta</option>
+          <option value="overtake">Předtrénovaná – umí předjíždět</option>
+        </select>
+        <span class="hint" id="opt-brain-info"></span>
+      </label>
+      <label>Trať
+        <select id="opt-track"></select>
+      </label>
+      <label>Počet kol
+        <select id="opt-laps">
+          <option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option>
+        </select>
+      </label>
+      <label class="check"><input id="opt-rays" type="checkbox"> Ukazovat senzory (paprsky) všech aut</label>
+      <label class="check"><input id="opt-coll" type="checkbox" checked> Auta do sebe můžou narážet</label>
+    </div>
+    <div class="controls">
+      <div><span class="pill red">Hráč 1</span> šipky ↑ ↓ ← →</div>
+      <div><span class="pill blue">Hráč 2</span> W S A D</div>
+    </div>
+    <div class="buttons">
+      <button id="btn-start">Start závodu</button>
+      <a class="btn-link" href="train.html">🧠 Trénink neuronové sítě</a>
+    </div>
+  </div>
+</div>
+
+<!-- Výsledky -->
+<div id="results" class="overlay hidden">
+  <div class="card">
+    <h1>Výsledky</h1>
+    <table id="results-table"></table>
+    <div class="buttons">
+      <button id="btn-again">Znovu</button>
+      <button id="btn-menu" class="secondary">Menu</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/neural.js"></script>
+<script src="js/pretrained.js"></script>
+<script src="js/pretrained-overtake.js"></script>
+<script src="js/render.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

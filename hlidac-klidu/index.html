@@ -1,0 +1,1344 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Rychlá arkádová hra o hlídači klidu ve školní místnosti.">
+  <title>Hlídač klidu</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231f5f5b'/%3E%3Cpath d='M14 18h36v22H14z' fill='%23f6e8c8'/%3E%3Cpath d='M20 26h24M20 34h14' stroke='%23163b37' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='46' cy='45' r='8' fill='%23d84c3d'/%3E%3Cpath d='M43 45h6' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #172126;
+      --muted: #53646f;
+      --paper: #f6eddc;
+      --wall: #d9dfc7;
+      --board: #1f5f5b;
+      --floor: #d4a86c;
+      --floor-dark: #bd8950;
+      --wood: #8e5834;
+      --wood-light: #bc8450;
+      --calm: #2f9f73;
+      --alert: #d84c3d;
+      --violet: #6352b8;
+      --blue: #327fc2;
+      --shadow: rgba(23, 33, 38, 0.22);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #22323a;
+      color: var(--ink);
+    }
+
+    body {
+      display: grid;
+      place-items: stretch;
+    }
+
+    .game-shell {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100dvh;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(246, 237, 220, 0.16), transparent 26rem),
+        linear-gradient(145deg, #27383f 0%, #16252b 100%);
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 2;
+      left: 16px;
+      right: 16px;
+      top: 14px;
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto auto auto;
+      gap: 10px;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .meter,
+    .stat,
+    .action-panel,
+    .overlay-panel {
+      border: 1px solid rgba(23, 33, 38, 0.18);
+      background: rgba(246, 237, 220, 0.92);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(10px);
+    }
+
+    .meter {
+      min-width: 0;
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    .meter-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 7px;
+      color: var(--ink);
+      font-size: 0.88rem;
+      font-weight: 750;
+      letter-spacing: 0;
+    }
+
+    .meter-track {
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(23, 33, 38, 0.16);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.16);
+    }
+
+    .meter-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--calm), #e3b447 58%, var(--alert));
+      transition: width 120ms linear;
+    }
+
+    .stat {
+      min-width: 92px;
+      border-radius: 8px;
+      padding: 9px 11px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 1px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.1;
+    }
+
+    .action-panel {
+      position: absolute;
+      z-index: 2;
+      right: 16px;
+      bottom: 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 16px;
+      background: var(--board);
+      color: #fffaf0;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #133d3a;
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #133d3a;
+    }
+
+    button.secondary {
+      background: var(--violet);
+      box-shadow: 0 3px 0 #3d317d;
+    }
+
+    button.sound-toggle {
+      min-width: 104px;
+      padding-inline: 12px;
+      background: #53646f;
+      box-shadow: 0 3px 0 #344149;
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: 0.48;
+      transform: none;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 650;
+      line-height: 1.2;
+      max-width: 230px;
+    }
+
+    .overlay {
+      position: absolute;
+      z-index: 3;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(18, 32, 38, 0.18), rgba(18, 32, 38, 0.56));
+    }
+
+    .overlay[hidden] {
+      display: none;
+    }
+
+    .overlay-panel {
+      width: min(560px, 100%);
+      border-radius: 8px;
+      padding: clamp(20px, 4vw, 34px);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2.1rem, 5vw, 4.4rem);
+      line-height: 0.92;
+      letter-spacing: 0;
+      color: var(--board);
+    }
+
+    .lead {
+      margin: 0 0 22px;
+      color: #25343a;
+      font-size: 1.06rem;
+      line-height: 1.45;
+      max-width: 46ch;
+    }
+
+    .rules {
+      display: grid;
+      gap: 8px;
+      margin: 0 0 22px;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.35;
+    }
+
+    .rules strong {
+      color: var(--ink);
+    }
+
+    .overlay-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 780px) {
+      .hud {
+        left: 10px;
+        right: 10px;
+        top: 10px;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .meter {
+        grid-column: 1 / -1;
+      }
+
+      .stat {
+        min-width: 0;
+        padding: 8px 9px;
+      }
+
+      .action-panel {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        justify-content: space-between;
+      }
+
+      .hint {
+        display: none;
+      }
+
+      .action-panel {
+        gap: 7px;
+      }
+
+      .action-panel button {
+        flex: 1;
+        min-width: 0;
+        padding-inline: 10px;
+      }
+
+      button.sound-toggle {
+        min-width: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell" aria-label="Hra Hlídač klidu">
+    <canvas id="game" aria-hidden="true"></canvas>
+
+    <section class="hud" aria-label="Stav hry">
+      <div class="meter">
+        <div class="meter-row">
+          <span>Hluk ve místnosti</span>
+          <span id="noiseLabel">0 %</span>
+        </div>
+        <div class="meter-track" aria-hidden="true">
+          <div class="meter-fill" id="noiseFill"></div>
+        </div>
+      </div>
+      <div class="stat">
+        <span>Čas</span>
+        <strong id="timeLabel">01:15</strong>
+      </div>
+      <div class="stat">
+        <span>Zásahy</span>
+        <strong id="scoreLabel">0</strong>
+      </div>
+      <div class="stat">
+        <span>Autorita</span>
+        <strong id="authorityLabel">100</strong>
+      </div>
+    </section>
+
+    <section class="action-panel" aria-label="Ovladani">
+      <p class="hint">WASD/šipky pohyb, mezerník utiší nejbližší problém. Na mobilu tapni do místnosti.</p>
+      <button id="calmButton" type="button">Utišit</button>
+      <button id="soundButton" class="sound-toggle" type="button" aria-pressed="true">Zvuk: zap</button>
+      <button id="pauseButton" class="secondary" type="button">Pauza</button>
+    </section>
+
+    <section class="overlay" id="overlay">
+      <div class="overlay-panel">
+        <h1 id="overlayTitle">Hlídač klidu</h1>
+        <p class="lead" id="overlayText">Udrž místnost pod kontrolou do konce služby. Když někdo začne dělat rámus, dostaň se k němu a zasáhni dřív, než hluk přeteče.</p>
+        <ul class="rules">
+          <li><strong>Povídalové</strong> ztichnou rychle, ale brzy se ozvou znovu.</li>
+          <li><strong>Bouchači</strong> dělají největší rámus a utišují se nejdéle.</li>
+          <li><strong>Pobíhači</strong> se musí chytit a chvíli udržet na místě.</li>
+          <li><strong>Lavice</strong> musíš obejít, ale hlučné postavy přes ně proběhnou.</li>
+          <li><strong>Bordel</strong> na zemi uklidíš stejnou akcí jako utišení.</li>
+        </ul>
+        <div class="overlay-actions">
+          <button id="startButton" type="button">Začít službu</button>
+          <button id="restartButton" class="secondary" type="button" hidden>Hrát znovu</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="sr-only" id="liveStatus" aria-live="polite">Hra je připravená.</p>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const noiseFill = document.getElementById("noiseFill");
+      const noiseLabel = document.getElementById("noiseLabel");
+      const timeLabel = document.getElementById("timeLabel");
+      const scoreLabel = document.getElementById("scoreLabel");
+      const authorityLabel = document.getElementById("authorityLabel");
+      const overlay = document.getElementById("overlay");
+      const overlayTitle = document.getElementById("overlayTitle");
+      const overlayText = document.getElementById("overlayText");
+      const startButton = document.getElementById("startButton");
+      const restartButton = document.getElementById("restartButton");
+      const calmButton = document.getElementById("calmButton");
+      const soundButton = document.getElementById("soundButton");
+      const pauseButton = document.getElementById("pauseButton");
+      const liveStatus = document.getElementById("liveStatus");
+
+      const room = {
+        x: 0,
+        y: 0,
+        w: 960,
+        h: 620,
+        padding: 46
+      };
+
+      const state = {
+        mode: "menu",
+        width: 0,
+        height: 0,
+        scale: 1,
+        noise: 0,
+        timeLeft: 75,
+        duration: 75,
+        score: 0,
+        authority: 100,
+        spawnTimer: 0,
+        messTimer: 10,
+        lastTime: 0,
+        pointerTarget: null,
+        shake: 0,
+        messageTimer: 0,
+        message: "",
+        students: [],
+        messes: []
+      };
+
+      const keys = new Set();
+      const desks = [
+        { x: 154, y: 188 }, { x: 348, y: 188 }, { x: 542, y: 188 }, { x: 736, y: 188 },
+        { x: 154, y: 342 }, { x: 348, y: 342 }, { x: 542, y: 342 }, { x: 736, y: 342 }
+      ];
+      const deskObstacles = desks.map((desk) => ({
+        left: desk.x - 64,
+        right: desk.x + 64,
+        top: desk.y - 30,
+        bottom: desk.y + 46
+      }));
+
+      const types = [
+        { name: "Povídal", color: "#327fc2", noise: 11, calmTime: 0.65, authority: 7, speed: 36, chance: 0.46 },
+        { name: "Bouchač", color: "#d84c3d", noise: 17, calmTime: 2.6, authority: 16, speed: 24, chance: 0.24 },
+        { name: "Papírkář", color: "#e1a535", noise: 9, calmTime: 1.05, authority: 10, speed: 31, chance: 0.19 },
+        { name: "Pobíhač", color: "#6352b8", noise: 13, calmTime: 1.8, authority: 13, speed: 68, chance: 0.11 }
+      ];
+
+      const audio = {
+        enabled: true,
+        context: null,
+        master: null,
+        compressor: null,
+        noiseBuffer: null,
+        nextVoiceAt: 0,
+        phrases: ["Psst, hele", "Počkej", "To snad ne", "Poslouchej"]
+      };
+
+      const player = {
+        x: 480,
+        y: 505,
+        r: 18,
+        collisionRadius: 14,
+        speed: 178,
+        facing: 0,
+        action: 0,
+        actionTotal: 0,
+        targetId: null
+      };
+
+      function resize() {
+        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        state.width = window.innerWidth;
+        state.height = window.innerHeight;
+        canvas.width = Math.floor(state.width * dpr);
+        canvas.height = Math.floor(state.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const availableW = state.width - 24;
+        const availableH = state.height - 130;
+        state.scale = Math.min(availableW / room.w, availableH / room.h);
+        state.scale = Math.max(0.58, Math.min(1.22, state.scale));
+        room.x = (state.width - room.w * state.scale) / 2;
+        room.y = Math.max(82, (state.height - room.h * state.scale) / 2 + 18);
+      }
+
+      function toScreenX(x) {
+        return room.x + x * state.scale;
+      }
+
+      function toScreenY(y) {
+        return room.y + y * state.scale;
+      }
+
+      function toWorld(clientX, clientY) {
+        return {
+          x: (clientX - room.x) / state.scale,
+          y: (clientY - room.y) / state.scale
+        };
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function hitsDesk(x, y, radius = player.collisionRadius) {
+        return deskObstacles.some((desk) => {
+          const nearestX = clamp(x, desk.left, desk.right);
+          const nearestY = clamp(y, desk.top, desk.bottom);
+          const offsetX = x - nearestX;
+          const offsetY = y - nearestY;
+          return offsetX * offsetX + offsetY * offsetY < radius * radius;
+        });
+      }
+
+      function dist(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+
+      function chooseType() {
+        const roll = Math.random();
+        let acc = 0;
+        for (const type of types) {
+          acc += type.chance;
+          if (roll <= acc) return type;
+        }
+        return types[0];
+      }
+
+      function ensureAudio() {
+        if (!audio.enabled) return;
+        const AudioEngine = window.AudioContext || window.webkitAudioContext;
+        if (!AudioEngine) {
+          audio.enabled = false;
+          soundButton.textContent = "Zvuk: nelze";
+          soundButton.disabled = true;
+          return;
+        }
+
+        if (!audio.context) {
+          audio.context = new AudioEngine();
+          audio.master = audio.context.createGain();
+          audio.master.gain.value = 0.92;
+          audio.compressor = audio.context.createDynamicsCompressor();
+          audio.compressor.threshold.value = -16;
+          audio.compressor.knee.value = 14;
+          audio.compressor.ratio.value = 4;
+          audio.compressor.attack.value = 0.004;
+          audio.compressor.release.value = 0.24;
+          audio.master.connect(audio.compressor);
+          audio.compressor.connect(audio.context.destination);
+
+          const length = Math.floor(audio.context.sampleRate * 1.2);
+          audio.noiseBuffer = audio.context.createBuffer(1, length, audio.context.sampleRate);
+          const data = audio.noiseBuffer.getChannelData(0);
+          for (let i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1;
+        }
+
+        if (audio.context.state === "suspended") audio.context.resume().catch(() => {});
+      }
+
+      function setSoundEnabled(enabled) {
+        audio.enabled = enabled;
+        soundButton.textContent = enabled ? "Zvuk: zap" : "Zvuk: vyp";
+        soundButton.setAttribute("aria-pressed", String(enabled));
+        if (enabled) {
+          ensureAudio();
+        } else {
+          if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+          if (audio.context && audio.context.state === "running") audio.context.suspend().catch(() => {});
+        }
+      }
+
+      function spatialOutput(student, volume) {
+        const context = audio.context;
+        const output = context.createGain();
+        const distance = Math.hypot(player.x - student.x, player.y - student.y);
+        output.gain.value = volume * clamp(1 - distance / 1400, 0.62, 1);
+        if (context.createStereoPanner) {
+          const panner = context.createStereoPanner();
+          panner.pan.value = clamp((student.x - player.x) / 520, -0.82, 0.82);
+          output.connect(panner);
+          panner.connect(audio.master);
+        } else {
+          output.connect(audio.master);
+        }
+        return output;
+      }
+
+      function playKnock(student) {
+        const context = audio.context;
+        const output = spatialOutput(student, 0.94);
+        const now = context.currentTime;
+        [0, 0.17].forEach((delay, index) => {
+          const oscillator = context.createOscillator();
+          const envelope = context.createGain();
+          oscillator.type = "sine";
+          oscillator.frequency.setValueAtTime(index ? 102 : 128, now + delay);
+          oscillator.frequency.exponentialRampToValueAtTime(66, now + delay + 0.14);
+          envelope.gain.setValueAtTime(0.0001, now + delay);
+          envelope.gain.exponentialRampToValueAtTime(0.8, now + delay + 0.008);
+          envelope.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.16);
+          oscillator.connect(envelope);
+          envelope.connect(output);
+          oscillator.start(now + delay);
+          oscillator.stop(now + delay + 0.18);
+        });
+      }
+
+      function playRustle(student) {
+        const context = audio.context;
+        const now = context.currentTime;
+        const output = spatialOutput(student, 0.78);
+        const source = context.createBufferSource();
+        const filter = context.createBiquadFilter();
+        const envelope = context.createGain();
+        source.buffer = audio.noiseBuffer;
+        source.playbackRate.value = 0.85 + Math.random() * 0.45;
+        filter.type = "bandpass";
+        filter.frequency.value = 2800 + Math.random() * 900;
+        filter.Q.value = 0.75;
+        envelope.gain.setValueAtTime(0.0001, now);
+        envelope.gain.linearRampToValueAtTime(0.52, now + 0.04);
+        envelope.gain.setValueAtTime(0.18, now + 0.13);
+        envelope.gain.linearRampToValueAtTime(0.48, now + 0.19);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+        source.connect(filter);
+        filter.connect(envelope);
+        envelope.connect(output);
+        source.start(now, Math.random() * 0.5, 0.36);
+      }
+
+      function playSteps(student) {
+        const context = audio.context;
+        const output = spatialOutput(student, 0.76);
+        const now = context.currentTime;
+        [0, 0.2].forEach((delay, index) => {
+          const oscillator = context.createOscillator();
+          const envelope = context.createGain();
+          oscillator.type = "triangle";
+          oscillator.frequency.setValueAtTime(index ? 72 : 86, now + delay);
+          oscillator.frequency.exponentialRampToValueAtTime(46, now + delay + 0.1);
+          envelope.gain.setValueAtTime(0.0001, now + delay);
+          envelope.gain.exponentialRampToValueAtTime(0.5, now + delay + 0.01);
+          envelope.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.12);
+          oscillator.connect(envelope);
+          envelope.connect(output);
+          oscillator.start(now + delay);
+          oscillator.stop(now + delay + 0.13);
+        });
+      }
+
+      function playChatter(student) {
+        playRustle(student);
+        if (!("speechSynthesis" in window) || performance.now() < audio.nextVoiceAt || window.speechSynthesis.speaking) return;
+        const utterance = new SpeechSynthesisUtterance(audio.phrases[Math.floor(Math.random() * audio.phrases.length)]);
+        const voices = window.speechSynthesis.getVoices();
+        utterance.voice = voices.find((voice) => voice.lang.toLowerCase().startsWith("cs")) || null;
+        utterance.lang = "cs-CZ";
+        utterance.volume = 0.72;
+        utterance.rate = 1.18 + Math.random() * 0.16;
+        utterance.pitch = 0.88 + Math.random() * 0.28;
+        window.speechSynthesis.speak(utterance);
+        audio.nextVoiceAt = performance.now() + 3900;
+      }
+
+      function playHush(student) {
+        if (!audio.enabled) return;
+        ensureAudio();
+        if (!audio.context) return;
+        const context = audio.context;
+        const now = context.currentTime;
+        const output = spatialOutput(student, 0.58);
+        const source = context.createBufferSource();
+        const filter = context.createBiquadFilter();
+        const envelope = context.createGain();
+        source.buffer = audio.noiseBuffer;
+        filter.type = "highpass";
+        filter.frequency.value = 3200;
+        envelope.gain.setValueAtTime(0.0001, now);
+        envelope.gain.linearRampToValueAtTime(0.36, now + 0.07);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
+        source.connect(filter);
+        filter.connect(envelope);
+        envelope.connect(output);
+        source.start(now, 0, 0.55);
+      }
+
+      function playStudentSound(student) {
+        if (!audio.enabled || !audio.context || audio.context.state !== "running") return;
+        if (student.type.name === "Bouchač") playKnock(student);
+        else if (student.type.name === "Papírkář") playRustle(student);
+        else if (student.type.name === "Pobíhač") playSteps(student);
+        else playChatter(student);
+      }
+
+      function nextSoundDelay(student) {
+        if (student.type.name === "Bouchač") return 1.1 + Math.random() * 1.15;
+        if (student.type.name === "Papírkář") return 1.35 + Math.random() * 1.3;
+        if (student.type.name === "Pobíhač") return 0.72 + Math.random() * 0.55;
+        return 2.1 + Math.random() * 1.8;
+      }
+
+      function updateAudio(dt) {
+        if (!audio.enabled || !audio.context || state.mode !== "playing") return;
+        for (const student of state.students) {
+          if (!student.noisy || student.beingCalmed) continue;
+          student.soundTimer -= dt;
+          if (student.soundTimer <= 0) {
+            playStudentSound(student);
+            student.soundTimer = nextSoundDelay(student);
+          }
+        }
+      }
+
+      function resetGame() {
+        state.noise = 8;
+        state.timeLeft = state.duration;
+        state.score = 0;
+        state.authority = 100;
+        state.spawnTimer = 1.5;
+        state.messTimer = 8;
+        state.pointerTarget = null;
+        state.shake = 0;
+        state.message = "";
+        state.messageTimer = 0;
+        state.messes = [];
+        player.x = 480;
+        player.y = 505;
+        player.action = 0;
+        player.actionTotal = 0;
+        player.targetId = null;
+
+        state.students = desks.map((desk, index) => {
+          const type = types[index % types.length];
+          const side = index % 2 === 0 ? -1 : 1;
+          return {
+            id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + index),
+            x: desk.x + side * 30,
+            y: desk.y + 56,
+            homeX: desk.x + side * 30,
+            homeY: desk.y + 56,
+            r: 15,
+            type,
+            noisy: false,
+            beingCalmed: false,
+            noiseAge: 0,
+            soundTimer: 0.3 + Math.random() * 1.2,
+            calmCooldown: 2 + Math.random() * 4,
+            wander: Math.random() * Math.PI * 2,
+            vx: 0,
+            vy: 0
+          };
+        });
+
+        updateHud();
+      }
+
+      function setMode(mode, title, text) {
+        state.mode = mode;
+        if (mode === "playing") {
+          overlay.hidden = true;
+          liveStatus.textContent = "Služba začala.";
+          pauseButton.textContent = "Pauza";
+          if (audio.enabled) ensureAudio();
+          return;
+        }
+
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+        if (audio.context && audio.context.state === "running") audio.context.suspend().catch(() => {});
+
+        overlay.hidden = false;
+        overlayTitle.textContent = title;
+        overlayText.textContent = text;
+        startButton.hidden = mode !== "menu";
+        restartButton.hidden = mode === "menu";
+        pauseButton.textContent = mode === "paused" ? "Pokračovat" : "Pauza";
+        liveStatus.textContent = text;
+      }
+
+      function startGame() {
+        ensureAudio();
+        resetGame();
+        setMode("playing");
+      }
+
+      function pauseGame() {
+        if (state.mode === "playing") {
+          setMode("paused", "Pauza", "Místnost zatím drží. Nadechni se a vrať se do služby.");
+        } else if (state.mode === "paused") {
+          setMode("playing");
+        }
+      }
+
+      function spawnNoise() {
+        const calmStudents = state.students.filter((student) => !student.noisy && student.calmCooldown <= 0);
+        if (!calmStudents.length) return;
+        const student = calmStudents[Math.floor(Math.random() * calmStudents.length)];
+        student.type = chooseType();
+        student.noisy = true;
+        student.beingCalmed = false;
+        student.noiseAge = 0;
+        student.soundTimer = 0.08 + Math.random() * 0.45;
+        student.wander = Math.random() * Math.PI * 2;
+        state.message = student.type.name + " dělá rámus";
+        state.messageTimer = 1.4;
+      }
+
+      function spawnMess() {
+        if (state.messes.length >= 5) return;
+        const kind = Math.random() > 0.45 ? "papir" : "zidle";
+        state.messes.push({
+          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+          kind,
+          x: 110 + Math.random() * 740,
+          y: 160 + Math.random() * 360,
+          r: kind === "papir" ? 13 : 18,
+          noise: kind === "papir" ? 3.8 : 5.8,
+          spin: Math.random() * Math.PI * 2
+        });
+      }
+
+      function nearestProblem() {
+        let best = null;
+        let bestDistance = Infinity;
+        for (const student of state.students) {
+          if (!student.noisy) continue;
+          const d = Math.hypot(player.x - student.x, player.y - student.y);
+          if (d < bestDistance) {
+            best = { kind: "student", item: student, distance: d };
+            bestDistance = d;
+          }
+        }
+        for (const mess of state.messes) {
+          const d = Math.hypot(player.x - mess.x, player.y - mess.y);
+          if (d < bestDistance) {
+            best = { kind: "mess", item: mess, distance: d };
+            bestDistance = d;
+          }
+        }
+        return best;
+      }
+
+      function calmAction() {
+        if (state.mode !== "playing" || player.action > 0) return;
+        const problem = nearestProblem();
+        if (!problem || problem.distance > 74) {
+          state.message = "Přibliž se k problému";
+          state.messageTimer = 1.1;
+          state.authority = Math.max(0, state.authority - 3);
+          return;
+        }
+
+        const authorityCost = problem.kind === "student" ? problem.item.type.authority : 7;
+        if (state.authority < authorityCost) {
+          state.message = "Chybí autorita";
+          state.messageTimer = 1.1;
+          return;
+        }
+
+        player.action = problem.kind === "student" ? problem.item.type.calmTime : 0.7;
+        player.actionTotal = player.action;
+        player.targetId = problem.item.id;
+        state.authority = Math.max(0, state.authority - authorityCost);
+
+        if (problem.kind === "student") {
+          problem.item.beingCalmed = true;
+          state.message = "Utišuji: " + problem.item.type.name;
+          playHush(problem.item);
+        } else {
+          state.message = problem.item.kind === "papir" ? "Sbírám papírky" : "Rovnám židli";
+        }
+        state.messageTimer = 1.4;
+      }
+
+      function finishAction() {
+        const student = state.students.find((item) => item.id === player.targetId);
+        if (student) {
+          student.noisy = false;
+          student.beingCalmed = false;
+          student.noiseAge = 0;
+          student.calmCooldown = 5 + Math.random() * 5;
+          state.noise = Math.max(0, state.noise - 7);
+          state.message = "Zásah: " + student.type.name + " ztichl";
+        } else {
+          const mess = state.messes.find((item) => item.id === player.targetId);
+          if (!mess) return;
+          state.messes = state.messes.filter((item) => item.id !== mess.id);
+          state.noise = Math.max(0, state.noise - 5);
+          state.message = mess.kind === "papir" ? "Papírky uklizené" : "Židle zpátky na místě";
+        }
+        state.score += 1;
+        state.messageTimer = 1.4;
+        player.targetId = null;
+        player.actionTotal = 0;
+      }
+
+      function updateAction(dt) {
+        if (player.action <= 0) return;
+        const student = state.students.find((item) => item.id === player.targetId);
+        const mess = state.messes.find((item) => item.id === player.targetId);
+        const target = student || mess;
+        if (!target || Math.hypot(player.x - target.x, player.y - target.y) > 88) {
+          if (student) student.beingCalmed = false;
+          player.action = 0;
+          player.actionTotal = 0;
+          player.targetId = null;
+          state.message = "Zásah přerušen: jsi příliš daleko";
+          state.messageTimer = 1.4;
+          return;
+        }
+
+        player.action = Math.max(0, player.action - dt);
+        if (player.action === 0) finishAction();
+      }
+
+      function update(dt) {
+        if (state.mode !== "playing") return;
+
+        state.timeLeft -= dt;
+        state.spawnTimer -= dt;
+        state.messTimer -= dt;
+        state.messageTimer = Math.max(0, state.messageTimer - dt);
+        state.authority = Math.min(100, state.authority + dt * 8.5);
+
+        const elapsed = state.duration - state.timeLeft;
+        const pressure = 1 + elapsed / state.duration;
+        if (state.spawnTimer <= 0) {
+          spawnNoise();
+          state.spawnTimer = Math.max(0.72, 3.1 - pressure * 0.85 - Math.random() * 0.8);
+        }
+        if (state.messTimer <= 0) {
+          spawnMess();
+          state.messTimer = Math.max(4.2, 9.5 - pressure * 1.9 + Math.random() * 2.4);
+        }
+
+        updatePlayer(dt);
+        updateAction(dt);
+        updateStudents(dt);
+        updateAudio(dt);
+
+        let addedNoise = 0;
+        for (const student of state.students) {
+          if (student.noisy) {
+            student.noiseAge += dt;
+            addedNoise += student.type.noise * (1 + Math.min(0.75, student.noiseAge / 8));
+          } else {
+            student.calmCooldown -= dt;
+          }
+        }
+        for (const mess of state.messes) {
+          mess.spin += dt * 2.3;
+          addedNoise += mess.noise;
+        }
+
+        const quietBonus = addedNoise <= 0 ? 13 : 2.2;
+        state.noise += (addedNoise * 0.052 - quietBonus) * dt;
+        state.noise = clamp(state.noise, 0, 100);
+        state.shake = Math.max(0, state.shake - dt * 2.5);
+        if (state.noise > 82) state.shake = Math.max(state.shake, (state.noise - 82) / 80);
+
+        if (state.noise >= 100) {
+          setMode("lost", "Příliš velký rámus", "Místnost vybuchla hlukem. Zvládl/a jsi " + state.score + " zásahů.");
+        } else if (state.timeLeft <= 0) {
+          setMode("won", "Služba zvládnutá", "Udržel/a jsi klid až do zvonění. Počet zásahů: " + state.score + ".");
+        }
+
+        updateHud();
+      }
+
+      function updatePlayer(dt) {
+        let dx = 0;
+        let dy = 0;
+        if (keys.has("arrowleft") || keys.has("a")) dx -= 1;
+        if (keys.has("arrowright") || keys.has("d")) dx += 1;
+        if (keys.has("arrowup") || keys.has("w")) dy -= 1;
+        if (keys.has("arrowdown") || keys.has("s")) dy += 1;
+
+        if (dx || dy) {
+          state.pointerTarget = null;
+          const length = Math.hypot(dx, dy);
+          dx /= length;
+          dy /= length;
+        } else if (state.pointerTarget) {
+          dx = state.pointerTarget.x - player.x;
+          dy = state.pointerTarget.y - player.y;
+          const length = Math.hypot(dx, dy);
+          if (length < 7) {
+            state.pointerTarget = null;
+            dx = 0;
+            dy = 0;
+          } else {
+            dx /= length;
+            dy /= length;
+          }
+        }
+
+        const speed = player.action > 0 ? player.speed * 0.32 : player.speed;
+        const previousX = player.x;
+        const previousY = player.y;
+        const nextX = clamp(player.x + dx * speed * dt, room.padding, room.w - room.padding);
+        if (!hitsDesk(nextX, player.y)) player.x = nextX;
+        const nextY = clamp(player.y + dy * speed * dt, 118, room.h - room.padding);
+        if (!hitsDesk(player.x, nextY)) player.y = nextY;
+
+        if (state.pointerTarget && (dx || dy) && Math.hypot(player.x - previousX, player.y - previousY) < 0.05) {
+          state.pointerTarget = null;
+          state.message = "Lavice je v cestě";
+          state.messageTimer = 1.1;
+        }
+        if (dx || dy) player.facing = Math.atan2(dy, dx);
+      }
+
+      function updateStudents(dt) {
+        for (const student of state.students) {
+          const roaming = student.type.name === "Pobíhač" && student.noisy;
+          const speed = roaming ? student.type.speed : student.type.speed * 0.3;
+          if (student.beingCalmed) {
+            student.vx = 0;
+            student.vy = 0;
+          } else if (student.noisy) {
+            student.wander += (Math.random() - 0.5) * dt * (roaming ? 4.5 : 2.1);
+            student.vx = Math.cos(student.wander) * speed;
+            student.vy = Math.sin(student.wander) * speed;
+          } else {
+            const homeDx = student.homeX - student.x;
+            const homeDy = student.homeY - student.y;
+            student.vx = homeDx * 1.5;
+            student.vy = homeDy * 1.5;
+          }
+
+          student.x = clamp(student.x + student.vx * dt, room.padding + 12, room.w - room.padding - 12);
+          student.y = clamp(student.y + student.vy * dt, 136, room.h - room.padding - 12);
+        }
+      }
+
+      function updateHud() {
+        const noise = Math.round(state.noise);
+        noiseFill.style.width = noise + "%";
+        noiseLabel.textContent = noise + " %";
+        const seconds = Math.max(0, Math.ceil(state.timeLeft));
+        timeLabel.textContent = String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+        scoreLabel.textContent = String(state.score);
+        authorityLabel.textContent = String(Math.round(state.authority));
+        calmButton.textContent = player.action > 0 ? "Utišuji..." : "Utišit";
+        calmButton.disabled = state.mode !== "playing" || state.authority < 7 || player.action > 0;
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, state.width, state.height);
+        ctx.save();
+        if (state.shake > 0) {
+          ctx.translate((Math.random() - 0.5) * state.shake * 9, (Math.random() - 0.5) * state.shake * 9);
+        }
+        ctx.translate(room.x, room.y);
+        ctx.scale(state.scale, state.scale);
+        drawRoom();
+        drawMesses();
+        drawStudents();
+        drawPlayer();
+        drawTargetRing();
+        drawFloatingMessage();
+        ctx.restore();
+      }
+
+      function drawRoom() {
+        ctx.fillStyle = "#bfcbad";
+        roundRect(0, 0, room.w, room.h, 20);
+        ctx.fill();
+
+        ctx.fillStyle = "#d4a86c";
+        roundRect(28, 84, room.w - 56, room.h - 112, 8);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(142, 88, 52, 0.28)";
+        ctx.lineWidth = 2;
+        for (let y = 112; y < room.h - 46; y += 42) {
+          ctx.beginPath();
+          ctx.moveTo(34, y);
+          ctx.lineTo(room.w - 34, y + 12);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#1f5f5b";
+        roundRect(228, 24, 504, 78, 6);
+        ctx.fill();
+        ctx.fillStyle = "rgba(246, 237, 220, 0.92)";
+        ctx.font = "700 24px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("Ticho je taky týmová práce", 480, 73);
+
+        ctx.fillStyle = "#e7dcc4";
+        roundRect(42, 18, 126, 54, 6);
+        ctx.fill();
+        ctx.fillStyle = "#172126";
+        ctx.font = "700 16px system-ui";
+        ctx.textAlign = "left";
+        ctx.fillText("Dveře", 74, 51);
+
+        for (const desk of desks) drawDesk(desk.x, desk.y);
+      }
+
+      function drawDesk(x, y) {
+        ctx.save();
+        ctx.fillStyle = "#71401f";
+        roundRect(x - 58, y + 32, 116, 14, 5);
+        ctx.fill();
+        ctx.fillStyle = "#bc8450";
+        roundRect(x - 64, y - 30, 128, 62, 7);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+        roundRect(x - 52, y - 20, 104, 14, 4);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(23, 33, 38, 0.18)";
+        ctx.lineWidth = 3;
+        roundRect(x - 64, y - 30, 128, 62, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawStudents() {
+        for (const student of state.students) {
+          const pulse = student.noisy ? 1 + Math.sin(performance.now() / 120 + student.x) * 0.08 : 1;
+          if (student.noisy) {
+            ctx.strokeStyle = student.type.color;
+            ctx.lineWidth = 3;
+            ctx.globalAlpha = 0.38;
+            ctx.beginPath();
+            ctx.arc(student.x, student.y, 34 + student.noiseAge * 3.2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+
+          ctx.fillStyle = "rgba(23, 33, 38, 0.22)";
+          ctx.beginPath();
+          ctx.ellipse(student.x, student.y + 18, 18, 7, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = student.noisy ? student.type.color : "#f6eddc";
+          ctx.beginPath();
+          ctx.arc(student.x, student.y, student.r * pulse, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#172126";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.fillStyle = "#172126";
+          ctx.beginPath();
+          ctx.arc(student.x - 5, student.y - 2, 2.2, 0, Math.PI * 2);
+          ctx.arc(student.x + 5, student.y - 2, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (student.noisy) drawNoiseIcon(student);
+          if (student.beingCalmed && player.actionTotal > 0) {
+            const progress = clamp(1 - player.action / player.actionTotal, 0, 1);
+            ctx.strokeStyle = "rgba(23, 33, 38, 0.2)";
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(student.x, student.y, 25, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.strokeStyle = "#2f9f73";
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.arc(student.x, student.y, 25, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+            ctx.stroke();
+            ctx.lineCap = "butt";
+          }
+        }
+      }
+
+      function drawNoiseIcon(student) {
+        const y = student.y - 38 - Math.sin(performance.now() / 160) * 3;
+        ctx.fillStyle = "#fffaf0";
+        ctx.strokeStyle = student.type.color;
+        ctx.lineWidth = 3;
+        roundRect(student.x - 24, y - 17, 48, 26, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = student.type.color;
+        ctx.font = "800 14px system-ui";
+        ctx.textAlign = "center";
+        const label = student.type.name === "Bouchač" ? "BUM" : student.type.name === "Pobíhač" ? "!" : student.type.name === "Papírkář" ? "FRT" : "PSST";
+        ctx.fillText(label, student.x, y + 1);
+      }
+
+      function drawMesses() {
+        for (const mess of state.messes) {
+          ctx.save();
+          ctx.translate(mess.x, mess.y);
+          ctx.rotate(mess.spin);
+          ctx.fillStyle = "rgba(23, 33, 38, 0.2)";
+          ctx.beginPath();
+          ctx.ellipse(0, 15, 18, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          if (mess.kind === "papir") {
+            ctx.fillStyle = "#fffaf0";
+            ctx.strokeStyle = "#327fc2";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-13, -9);
+            ctx.lineTo(12, -13);
+            ctx.lineTo(15, 8);
+            ctx.lineTo(-8, 13);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = "#8e5834";
+            roundRect(-16, -9, 32, 18, 4);
+            ctx.fill();
+            ctx.strokeStyle = "#172126";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-12, 9);
+            ctx.lineTo(-20, 21);
+            ctx.moveTo(12, 9);
+            ctx.lineTo(20, 21);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+
+      function drawPlayer() {
+        const actionPulse = player.action > 0 ? 1 + Math.sin(performance.now() / 70) * 0.12 : 1;
+        ctx.fillStyle = "rgba(23, 33, 38, 0.25)";
+        ctx.beginPath();
+        ctx.ellipse(player.x, player.y + 21, 23, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#25343a";
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.r * actionPulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#fffaf0";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = "#f4b86a";
+        ctx.beginPath();
+        ctx.arc(player.x, player.y - 7, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        const angle = player.facing;
+        ctx.strokeStyle = player.action > 0 ? "#d84c3d" : "#f6eddc";
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(player.x + Math.cos(angle) * 10, player.y + Math.sin(angle) * 10);
+        ctx.lineTo(player.x + Math.cos(angle) * 26, player.y + Math.sin(angle) * 26);
+        ctx.stroke();
+
+        if (player.action > 0) {
+          const progress = player.actionTotal > 0 ? clamp(1 - player.action / player.actionTotal, 0, 1) : 0;
+          ctx.strokeStyle = "#d84c3d";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, 42, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+          ctx.stroke();
+        }
+      }
+
+      function drawTargetRing() {
+        if (state.mode !== "playing") return;
+        const problem = nearestProblem();
+        if (!problem || problem.distance > 130) return;
+        ctx.strokeStyle = problem.distance <= 74 ? "#2f9f73" : "#d84c3d";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 7]);
+        ctx.beginPath();
+        ctx.arc(problem.item.x, problem.item.y, problem.kind === "student" ? 28 : 24, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      function drawFloatingMessage() {
+        if (state.messageTimer <= 0 || !state.message) return;
+        ctx.globalAlpha = Math.min(1, state.messageTimer);
+        ctx.fillStyle = "rgba(246, 237, 220, 0.94)";
+        ctx.strokeStyle = "rgba(23, 33, 38, 0.22)";
+        ctx.lineWidth = 2;
+        roundRect(320, 116, 320, 38, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#172126";
+        ctx.font = "800 18px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(state.message, 480, 141);
+        ctx.globalAlpha = 1;
+      }
+
+      function roundRect(x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+      }
+
+      function loop(timestamp) {
+        const dt = Math.min(0.033, (timestamp - state.lastTime || 16) / 1000);
+        state.lastTime = timestamp;
+        update(dt);
+        draw();
+        requestAnimationFrame(loop);
+      }
+
+      window.addEventListener("resize", resize);
+      window.addEventListener("keydown", (event) => {
+        const key = event.key.toLowerCase();
+        if (["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "d", "w", "s", " "].includes(key)) {
+          event.preventDefault();
+        }
+        if (key === " ") calmAction();
+        if (key === "p" || key === "escape") pauseGame();
+        keys.add(key);
+      });
+      window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
+
+      canvas.addEventListener("pointerdown", (event) => {
+        const point = toWorld(event.clientX, event.clientY);
+        if (point.x < 0 || point.y < 0 || point.x > room.w || point.y > room.h) return;
+        const target = {
+          x: clamp(point.x, room.padding, room.w - room.padding),
+          y: clamp(point.y, 118, room.h - room.padding)
+        };
+        if (hitsDesk(target.x, target.y)) {
+          state.pointerTarget = null;
+          state.message = "Na lavici se vstoupit nedá";
+          state.messageTimer = 1.1;
+          return;
+        }
+        state.pointerTarget = target;
+      });
+
+      canvas.addEventListener("dblclick", calmAction);
+      calmButton.addEventListener("click", calmAction);
+      soundButton.addEventListener("click", () => setSoundEnabled(!audio.enabled));
+      pauseButton.addEventListener("click", pauseGame);
+      startButton.addEventListener("click", startGame);
+      restartButton.addEventListener("click", startGame);
+
+      resize();
+      resetGame();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+</html>

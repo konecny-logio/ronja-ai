@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hry a neuronové sítě</title>
+<style>
+  :root { --ink: #172126; --muted: #53646f; --paper: #f6eddc; --card: #fffaf0; --line: rgba(23, 33, 38, .12);
+    --accent: #1f5f5b; --red: #d84c3d; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #f2ede3; --muted: #a9b4ba; --paper: #172126; --card: #213036; --line: rgba(255, 255, 255, .12);
+      --accent: #5fb3a9; --red: #ef7b6d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    line-height: 1.5; }
+  main { max-width: 860px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-size: clamp(28px, 5vw, 40px); margin: 0 0 8px; }
+  .lead { color: var(--muted); margin: 0 0 32px; max-width: 60ch; }
+  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .game { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; border-top: 5px solid var(--accent); }
+  .game.f1 { border-top-color: var(--red); }
+  .game h2 { margin: 0 0 6px; font-size: 22px; }
+  .game p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .links a { display: inline-block; padding: 9px 16px; border-radius: 10px; font-weight: 700; text-decoration: none;
+    background: var(--accent); color: #fff; }
+  .game.f1 .links a:first-child { background: var(--red); }
+  .links a.secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .links a:hover { filter: brightness(1.1); }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Hry a neuronové sítě</h1>
+  <p class="lead">Dvě hry do prohlížeče. U každé si můžeš zahrát sám, nebo se podívat, jak se ji neuronová síť
+    naučí hrát úplně sama – evolucí, bez toho, aby jí kdokoliv řekl jak.</p>
+
+  <div class="games">
+    <section class="game">
+      <h2>Hlídač klidu</h2>
+      <p>Udrž ve třídě klid do zvonění: dojdi k tomu, kdo dělá rámus, a utiš ho dřív, než hluk přeteče.</p>
+      <div class="links">
+        <a href="hlidac-klidu/">▶ Hrát</a>
+        <a class="secondary" href="hlidac-klidu/trenink/">🧠 Trénink sítě</a>
+      </div>
+    </section>
+
+    <section class="game f1">
+      <h2>F1 závody</h2>
+      <p>Formule z pohledu shora pro 1–2 hráče proti počítačovým soupeřům – i proti síti, kterou si sám natrénuješ.</p>
+      <div class="links">
+        <a href="f1/">▶ Hrát</a>
+        <a class="secondary" href="f1/train.html">🧠 Trénink sítě</a>
+      </div>
+    </section>
+  </div>
+
+  <footer>Vše běží přímo v prohlížeči, nic se neinstaluje. Nejlépe na počítači s klávesnicí.</footer>
+</main>
+</body>
+</html>
